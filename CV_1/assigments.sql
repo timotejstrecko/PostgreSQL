@@ -527,3 +527,389 @@ FROM
     avg_all
 
 
+/*
+Write query, which returns the names and registration dates of all programmers.
+*/
+
+SELECT 
+    name,
+    signed_in_at
+FROM 
+    programmers
+
+/*
+Write query to return the names and registration dates of all programmers whose names begin with the letter R.
+*/
+
+SELECT 
+    name, 
+    signed_in_at
+FROM 
+    programmers
+WHERE 
+    name LIKE 'R%';
+
+
+/*
+Type SELECT, which returns the name and registration date of the most recent programmer whose name begins with the letter R. Hint: limit.
+*/
+
+SELECT
+    name,
+    signed_in_at
+FROM
+    programmers
+WHERE
+    name LIKE 'R%'
+ORDER BY
+    signed_in_at DESC
+LIMIT
+    1;
+
+/*
+Write SELECT, which returns the names of all programmers who have a name shorter than 12 characters.
+*/
+
+SELECT 
+    name
+FROM 
+    programmers
+WHERE 
+    LENGTH(name) < 12;
+
+
+/*
+Type SELECT, which will return the names of all programmers, with those who have a name longer than 12 characters having it truncated to 12 characters.
+*/
+
+SELECT 
+    CASE 
+        WHEN LENGTH(name) > 12 THEN SUBSTRING(name, 1, 12)
+        ELSE name
+    END AS "Truncated Name"
+FROM programmers;
+
+
+/*
+Type SELECT, which returns the names of all programmers in reverse and in upper case.
+*/
+
+SELECT
+    REVERSE(UPPER(name)) AS "Reversed UpperCase Name"
+FROM
+    programmers
+
+/*
+Write a SELECT that returns only the first word of the names of all programmers.
+*/
+
+SELECT 
+    SPLIT_PART(name, ' ', 1)
+FROM
+    programmers
+
+/*
+Type SELECT to return the names and registration dates of all programmers who registered in 2016.
+*/
+
+SELECT
+    name,
+    signed_in_at
+FROM
+    programmers
+WHERE
+    EXTRACT(YEAR FROM signed_in_at) = 2016;
+
+/*
+Type SELECT to return the names and registration dates of all programmers who registered in February 2016.
+*/
+
+SELECT
+    name,
+    signed_in_at
+FROM
+    programmers
+WHERE 
+    signed_in_at BETWEEN '2016-02-01' AND '2016-02-29';
+
+
+/*
+Type SELECT to return the names of all programmers and the number of days between their registration date and the first of April 2016. Ordered from least to greatest.
+*/
+
+SELECT
+    name, 
+    ABS(DATE '2016-04-01' - signed_in_at) AS "Day Difference"
+FROM
+    programmers
+ORDER BY
+    "Day Difference"
+
+/*
+Write a SELECT that returns the label of all languages that have at least one project.
+*/
+
+SELECT DISTINCT
+    label
+FROM
+    languages
+INNER JOIN
+    projects ON projects.language_id = languages.id;
+
+/*
+Write SELECT that returns the label of all languages that have at least one project that started in 2014.
+*/
+
+SELECT DISTINCT
+    label
+FROM
+    languages
+INNER JOIN
+    projects ON projects.language_id = languages.id
+WHERE
+    EXTRACT(YEAR FROM projects.created_at) = 2014;
+
+
+/*
+Write a SELECT that returns the names of all projects that are programmed in ruby or python (Hint: IN).
+*/
+
+SELECT
+    name
+FROM
+    projects
+INNER JOIN 
+    languages on languages.id = projects.language_id
+WHERE
+    languages.label IN ('ruby', 'python');
+
+/*
+Write a SELECT that returns the names of all python programmers.
+*/
+
+SELECT DISTINCT
+    programmers.name
+FROM
+    programmers
+INNER JOIN
+    projects_programmers AS pp ON pp.programmer_id = programmers.id
+INNER JOIN
+    projects ON pp.project_id = projects.id
+INNER JOIN
+    languages ON languages.id = projects.language_id
+WHERE
+    languages.label = 'python'
+
+/*
+Write a SELECT that returns the names of all python programmers who are owners (even non-python) of the project.
+*/
+
+SELECT DISTINCT
+    programmers.name
+FROM
+    programmers
+INNER JOIN
+    projects_programmers AS pp ON pp.programmer_id = programmers.id
+INNER JOIN
+    projects ON pp.project_id = projects.id
+INNER JOIN
+    languages ON languages.id = projects.language_id
+WHERE
+    languages.label = 'python' AND EXISTS (Select 
+                                                1
+                                            FROM
+                                                projects_programmers AS pp2
+                                            INNER JOIN
+                                                programmers AS p2 ON pp2.programmer_id = p2.id 
+                                            WHERE pp2.owner = TRUE and p2.id = programmers.id);
+
+/*
+Write a SELECT that returns the average number of days (rounded to integers) that all programmers are registered in our database.
+*/
+
+SELECT
+    CAST(AVG(DATE(NOW()) - signed_in_at) AS INTEGER) AS "Average Days Of Programmers"
+FROM
+    programmers
+
+/*
+Type SELECT to return the total number of days that ruby programmers are registered in our database.
+*/
+
+SELECT DISTINCT
+    SUM(DATE(NOW()) - signed_in_at)
+FROM
+    programmers
+INNER JOIN
+    projects_programmers AS pp ON pp.programmer_id = programmers.id
+INNER JOIN
+    projects ON pp.project_id = projects.id
+INNER JOIN
+    languages ON languages.id = projects.language_id
+WHERE
+    languages.label = 'ruby'
+
+/*
+Type SELECT to return the name of the project and the number of programmers working on it.
+*/
+
+SELECT
+    projects.name AS project_name,
+    COUNT(pp.programmer_id) AS "Number Of Programmers"
+FROM
+    projects
+JOIN
+    projects_programmers pp ON pp.project_id = projects.id
+GROUP BY
+    projects.name;
+
+
+/*
+Type SELECT, which returns the name of the project and the total number of days the
+ programmers have worked on it (assume they have been working on the project every day since they joined).
+*/
+
+-- Didn't understad, did the the time for every programmer from the very beggining of the project
+WITH programmer_count AS (
+    SELECT
+    projects.name AS "Name",
+    COUNT(pp.programmer_id) AS "Programmers"
+FROM
+    projects
+INNER JOIN
+    projects_programmers AS pp ON pp.project_id = projects.id
+GROUP BY
+    projects.name
+)
+SELECT
+    pc."Name",
+    pc."Programmers" * (DATE(NOW()) - projects.created_at)
+FROM
+    projects
+INNER JOIN
+    programmer_count AS pc ON pc."Name" = projects.name
+
+
+SELECT
+    projects.name AS "Name",
+    SUM(DATE(NOW()) - DATE(pp.joined_at))
+FROM
+    projects
+INNER JOIN
+    projects_programmers AS pp ON pp.project_id = projects.id
+GROUP BY
+    projects.name;
+
+/*
+Type SELECT, which returns the name of the project on which the most programmers are working.
+ If there are more than one such project, apply lexicographic sorting and list the first one.
+*/
+
+
+    SELECT
+        projects.name,
+        COUNT(pp.programmer_id) AS "Count"
+    FROM
+        projects
+    INNER JOIN
+        projects_programmers AS pp ON pp.project_id = projects.id
+    GROUP BY
+        projects.name
+    ORDER BY
+        COUNT(pp.programmer_id) DESC,
+         projects.name
+    LIMIT
+        1;
+
+
+/*
+Type SELECT, which returns the name of the project on which the most programmers are working. 
+If there are more such projects, list the names of all.
+*/
+
+WITH programmers_count AS (
+    SELECT
+        projects.name AS "Name",
+        COUNT(pp.programmer_id) AS "Count"
+    FROM
+        projects
+    INNER JOIN
+        projects_programmers AS pp ON pp.project_id = projects.id
+    GROUP BY
+        projects.name
+),
+max_count AS (
+    SELECT
+        MAX("Count") AS "Max Count"
+    FROM
+        programmers_count
+)
+SELECT
+    pc."Name",
+    pc."Count"
+FROM
+    programmers_count AS pc
+INNER JOIN
+    max_count AS mc ON mc."Max Count" = pc."Count";
+
+/*
+Write a SELECT that returns the name of each programming language along with the number of programmers who use it. Sorted from largest to smallest.
+*/
+SELECT
+    languages.label,
+    COUNT(DISTINCT pp.programmer_id) AS "Programmers Count"
+FROM
+    languages
+INNER JOIN 
+    projects ON projects.language_id = languages.id
+INNER JOIN
+    projects_programmers AS pp ON pp.project_id = projects.id
+GROUP BY
+    languages.label
+ORDER BY
+    "Programmers Count" DESC;
+
+/*
+Write a SELECT that returns the name of each programming language along with the name of the oldest
+ project for that programming language. For those languages that have no project, have written in project column ’No project yet’.
+*/
+
+
+SELECT
+    languages.label AS "Language",
+    COALESCE(
+        (
+            SELECT 
+                projects.name
+            FROM 
+                projects 
+            WHERE 
+                projects.language_id = languages.id
+            ORDER BY
+                projects.created_at ASC
+            LIMIT
+                1
+        ),
+        'No project yet'
+    ) AS "The Oldest Project"
+FROM
+    languages;
+
+/*
+Write a SELECT that returns the name of each programming language along with the number of projects
+ in which the language is used. Ordered from largest to smallest, let the languages be sorted lexicographically
+  if the number of projects is equal. Try using the column index instead of the column name in the sorting.
+*/
+
+SELECT
+    languages.label AS "Language",
+    COUNT(projects.id) AS "Number Of Projects"
+FROM 
+    languages
+LEFT JOIN
+    projects ON projects.language_id = languages.id
+GROUP BY
+    languages.label
+ORDER BY
+    2 DESC, 1;
+
