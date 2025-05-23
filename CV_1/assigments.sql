@@ -1109,9 +1109,232 @@ Write SELECT, which for each region returns the names of the three places where 
 temperature was measured (let the temperature be in the output). Sorted by temperature in descending order.
 */
 
+SELECT
+    *
+FROM (
+    SELECT 
+        *
+    FROM (
+        SELECT DISTINCT ON (Cities.name)
+            Cities.name AS city,
+            Measurements.temperature AS temperature,
+            Regions.name AS region
+        FROM
+            Cities
+        INNER JOIN 
+            Regions ON Regions.id = Cities.region_id
+        INNER JOIN 
+            Sensors ON Sensors.city_id = Cities.id
+        INNER JOIN 
+            Measurements ON Measurements.sensor_id = Sensors.id
+        WHERE 
+            Regions.name = 'Západ'
+        ORDER BY 
+            Cities.name,
+            Measurements.temperature DESC
+    ) AS hottest_in_cities_in_zapad
+    ORDER BY 
+        temperature DESC
+    LIMIT 
+        3
+) AS top_zapad
+
+UNION ALL
+
+SELECT
+    *
+FROM (
+    SELECT 
+        *
+    FROM (
+        SELECT DISTINCT ON (Cities.name)
+            Cities.name AS city,
+            Measurements.temperature AS temperature,
+            Regions.name AS region
+        FROM
+            Cities
+        INNER JOIN 
+            Regions ON Regions.id = Cities.region_id
+        INNER JOIN 
+            Sensors ON Sensors.city_id = Cities.id
+        INNER JOIN 
+            Measurements ON Measurements.sensor_id = Sensors.id
+        WHERE 
+            Regions.name = 'Stred'
+        ORDER BY 
+            Cities.name,
+            Measurements.temperature DESC
+    ) AS hottest_in_cities_in_stred
+    ORDER BY 
+        temperature DESC
+    LIMIT 
+        3
+) AS top_stred
+
+UNION ALL
+
+SELECT
+    *
+FROM (
+    SELECT 
+        *
+    FROM (
+        SELECT DISTINCT ON (Cities.name)
+            Cities.name AS city,
+            Measurements.temperature AS temperature,
+            Regions.name AS region
+        FROM
+            Cities
+        INNER JOIN 
+            Regions ON Regions.id = Cities.region_id
+        INNER JOIN 
+            Sensors ON Sensors.city_id = Cities.id
+        INNER JOIN 
+            Measurements ON Measurements.sensor_id = Sensors.id
+        WHERE 
+            Regions.name = 'Východ'
+        ORDER BY 
+            Cities.name,
+            Measurements.temperature DESC
+    ) AS hottest_in_cities_in_vychod
+    ORDER BY 
+        temperature DESC
+    LIMIT 
+        3
+) AS top_vychod;
+
+-- More readable version
+
+WITH hottest_in_cities_in_zapad AS (
+    SELECT DISTINCT ON (Cities.name)
+        Cities.name AS city,
+        Measurements.temperature AS temperature,
+        Regions.name AS region
+    FROM
+        Cities
+    INNER JOIN 
+        Regions ON Regions.id = Cities.region_id
+    INNER JOIN 
+        Sensors ON Sensors.city_id = Cities.id
+    INNER JOIN 
+        Measurements ON Measurements.sensor_id = Sensors.id
+    WHERE 
+        Regions.name = 'Západ'
+    ORDER BY 
+        Cities.name,
+        Measurements.temperature DESC
+),
+top_zapad AS (
+    SELECT 
+        *
+    FROM 
+        hottest_in_cities_in_zapad
+    ORDER BY 
+        temperature DESC
+    LIMIT 
+        3
+),
+hottest_in_cities_in_stred AS (
+    SELECT DISTINCT ON (Cities.name)
+        Cities.name AS city,
+        Measurements.temperature AS temperature,
+        Regions.name AS region
+    FROM
+        Cities
+    INNER JOIN 
+        Regions ON Regions.id = Cities.region_id
+    INNER JOIN 
+        Sensors ON Sensors.city_id = Cities.id
+    INNER JOIN 
+        Measurements ON Measurements.sensor_id = Sensors.id
+    WHERE 
+        Regions.name = 'Stred'
+    ORDER BY 
+        Cities.name,
+        Measurements.temperature DESC
+),
+top_stred AS (
+    SELECT 
+        *
+    FROM 
+        hottest_in_cities_in_stred
+    ORDER BY 
+        temperature DESC
+    LIMIT 
+        3
+),
+hottest_in_cities_in_vychod AS (
+    SELECT DISTINCT ON (Cities.name)
+        Cities.name AS city,
+        Measurements.temperature AS temperature,
+        Regions.name AS region
+    FROM
+        Cities
+    INNER JOIN 
+        Regions ON Regions.id = Cities.region_id
+    INNER JOIN 
+        Sensors ON Sensors.city_id = Cities.id
+    INNER JOIN 
+        Measurements ON Measurements.sensor_id = Sensors.id
+    WHERE 
+        Regions.name = 'Východ'
+    ORDER BY 
+        Cities.name,
+        Measurements.temperature DESC
+),
+top_vychod AS (
+    SELECT 
+        *
+    FROM 
+        hottest_in_cities_in_vychod
+    ORDER BY 
+        temperature DESC
+    LIMIT 
+        3
+)
+SELECT * FROM top_zapad
+UNION ALL
+SELECT * FROM top_stred
+UNION ALL
+SELECT * FROM top_vychod;
+
 /*
 Write a SELECT that pairs the regions in which there is the largest difference in average temperature.
 Let the resulting two columns be ordered lexicographically.
 
 Hint: LEAST and GREATEST.
 */
+
+WITH region_avg AS (
+    SELECT
+        Regions.name AS "Region",
+        ROUND(AVG(Measurements.temperature), 2) AS "Avg Temp"
+    FROM
+        Regions
+    INNER JOIN 
+        Cities ON Cities.region_id = Regions.id
+    INNER JOIN 
+        Sensors ON Sensors.city_id = Cities.id
+    INNER JOIN 
+        Measurements ON Measurements.sensor_id = Sensors.id
+    GROUP BY 
+        Regions.name
+),
+region_pairs AS (
+    SELECT
+        LEAST(r1."Region", r2."Region") AS "Region 1",
+        GREATEST(r1."Region", r2."Region") AS "Region 2",
+        ABS(r1.a"Avg Temp" - r2."Avg Temp") AS "Temp Diff"
+    FROM region_avg r1
+    JOIN region_avg r2 ON r1."Region" <> r2."Region"
+)
+SELECT
+    "Region 1",
+    "Region 2",
+    "Temp Diff"
+FROM 
+    region_pairs
+ORDER BY 
+    temp_difference DESC
+LIMIT 
+    1;
