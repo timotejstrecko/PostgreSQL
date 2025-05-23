@@ -527,6 +527,8 @@ FROM
     avg_all
 
 
+--                                                       PROGRAMMERS Dataset
+
 /*
 Write query, which returns the names and registration dates of all programmers.
 */
@@ -769,7 +771,7 @@ Type SELECT, which returns the name of the project and the total number of days 
  programmers have worked on it (assume they have been working on the project every day since they joined).
 */
 
--- Didn't understad, did the the time for every programmer from the very beggining of the project
+-- Didn'subquery understad, did the the time for every programmer from the very beggining of the project
 WITH programmer_count AS (
     SELECT
     projects.name AS "Name",
@@ -913,3 +915,203 @@ GROUP BY
 ORDER BY
     2 DESC, 1;
 
+
+--                                               Movies Dataset
+
+
+/*
+Write a SELECT that returns the number of the month of the year and the average temperature
+for that month (two decimal places) for the months of 2015, arranged by month in ascending order.
+*/
+
+SELECT
+    TO_CHAR(meas.measured_at, 'Month') AS "Month",
+    ROUND(AVG(meas.temperature), 2) AS "Temperature"
+FROM
+    Measurements AS meas
+WHERE
+    EXTRACT(YEAR FROM meas.measured_at) = 2015
+GROUP BY
+    "Month",
+    EXTRACT(MONTH FROM meas.measured_at)
+ORDER BY
+    EXTRACT(MONTH FROM meas.measured_at);
+
+
+/*
+Write a SELECT that returns the numbers of those months in which the average temperature was
+greater than the overall average temperature. Sorted in ascending order.
+Also list the temperature, rounded to two decimal places.
+
+Notes: Depending on your understanding of the problem, you may want to consider the year distinction
+or a simpler approach in general for the months.
+*/
+
+-- general approach
+-- 1.
+WITH overall_temp AS (
+    SELECT
+        ROUND(AVG(meas.temperature), 2) AS "Average Temp"
+    FROM
+        Measurements AS meas
+),
+months_avg AS (
+    SELECT
+        ROUND(AVG(meas.temperature), 2) AS "Average Temp",
+        EXTRACT(MONTH FROM meas.measured_at) AS "Month"
+    FROM 
+        Measurements AS meas
+    GROUP BY
+        "Month"
+)
+SELECT
+    ma."Month",
+    ma."Average Temp"
+FROM
+    months_avg AS ma
+INNER JOIN
+    overall_temp ON overall_temp."Average Temp" < ma."Average Temp"
+ORDER BY
+    "Month";
+
+-- 2.
+SELECT
+    EXTRACT(MONTH FROM meas.measured_at) AS "Month",
+    ROUND(AVG(temperature), 2) AS "Average Month Temp"
+FROM 
+    Measurements AS meas
+GROUP BY
+    "Month"
+HAVING ROUND(AVG(temperature), 2) > (
+    SELECT
+        AVG(temperature)
+    FROM
+        Measurements
+    )
+ORDER BY
+    "Month";
+
+-- year aprroach  (I just realized there is only year 2015 after I done it -.-) (I manually added just 1 line of code, so idk what is it gonna do :D)
+
+SELECT
+    *
+FROM (
+    SELECT
+        EXTRACT(YEAR FROM meas.measured_at) AS "Year",
+        EXTRACT(MONTH FROM meas.measured_at) AS "Month",
+        ROUND(AVG(meas.temperature), 2) AS "Average Month Temp"
+    FROM
+        Measurements AS meas
+    GROUP BY
+        EXTRACT(YEAR FROM meas.measured_at),
+        EXTRACT(MONTH FROM meas.measured_at)
+) subquery
+WHERE
+    subquery."Average Month Temp" >= (
+        SELECT
+            AVG(meas2.temperature)
+        FROM
+            Measurements AS meas2
+        WHERE
+            EXTRACT(YEAR FROM meas2.measured_at) = subquery."Year"
+        GROUP BY
+            EXTRACT(YEAR FROM meas2.measured_at)
+    )
+ORDER BY
+    subquery."Year",
+    subquery."Month";
+
+
+/*
+Type SELECT, which returns the name of the region along with the number of sensors in that
+region, sorted in descending order by number.
+*/
+
+SELECT
+    reg.name AS "Region Name",
+    COUNT(reg.name) AS "Sensor Count"
+FROM
+    Regions AS reg
+INNER JOIN 
+    Cities ON Cities.region_id = reg.id
+INNER JOIN
+    Sensors ON sensors.city_id = Cities.id
+GROUP BY
+    reg.name
+ORDER BY
+    "Sensor Count" DESC;
+
+/*
+Type SELECT to return the name of the city with the most stable temperature
+(lowest standard deviation).
+*/
+
+SELECT
+    Cities.name AS "City",
+    ROUND(STDDEV(meas.temperature), 2) AS "Temperature Stddev"
+FROM
+    Measurements meas
+INNER JOIN
+    Sensors ON meas.sensor_id = Sensors.id
+INNER JOIN 
+    Cities ON Sensors.city_id = Cities.id
+GROUP BY
+    Cities.name
+ORDER BY
+    "Temperature Stddev"
+LIMIT
+    1;
+
+
+/*
+Type SELECT, which returns the name of the city along with the number of sensors in that city,
+sorted in descending order.
+*/
+
+SELECT
+    Cities.name AS "City",
+    COUNT(Sensors.city_id) AS "Sensor Count"
+FROM
+    Cities
+INNER JOIN 
+    Sensors ON Sensors.city_id = Cities.id
+GROUP BY
+    "City"
+ORDER BY
+    "Sensor Count" DESC;
+
+/*
+Type SELECT, which for each region returns the name of the city where the highest temperature
+was measured (let that temperature be in the output). Sorted by region name in descending order.
+
+Hint: 1 subselect + DISTINCT ON combo with ORDER BY.
+*/
+
+SELECT DISTINCT ON (Regions.name)
+    Regions.name AS "Name",
+    Cities.name AS "City",
+    Measurements.temperature AS "Temperature"
+FROM 
+    Regions
+INNER JOIN
+    Cities ON Cities.region_id = Regions.id
+INNER JOIN 
+    Sensors ON Sensors.city_id = Cities.id
+INNER JOIN
+    Measurements ON Measurements.sensor_id = Sensors.id
+ORDER BY
+    "Name" DESC,
+    "Temperature" DESC,
+    "City";
+
+/*
+Write SELECT, which for each region returns the names of the three places where the highest
+temperature was measured (let the temperature be in the output). Sorted by temperature in descending order.
+*/
+
+/*
+Write a SELECT that pairs the regions in which there is the largest difference in average temperature.
+Let the resulting two columns be ordered lexicographically.
+
+Hint: LEAST and GREATEST.
+*/
